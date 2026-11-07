@@ -16,7 +16,6 @@ import {
   Avatar,
   EmptyState,
   ErrorState,
-  Icon,
   LoadingRows,
   SegmentedControl,
 } from "../components/ui/index.js";
@@ -183,5 +182,3 @@ export function ActivityPage() {
     </div>
   );
 }
-
-export { Icon };

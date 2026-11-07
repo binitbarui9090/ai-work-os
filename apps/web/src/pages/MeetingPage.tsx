@@ -27,7 +27,6 @@ import {
   Tabs,
   useToast,
 } from "../components/ui/index.js";
-import styles from "./pages.module.css";
 import meetingStyles from "./meeting.module.css";
 
 export function MeetingPage() {
@@ -529,5 +528,3 @@ function formatSeconds(seconds: number): string {
     ? `${hours}:${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`
     : `${minutes}:${String(rest).padStart(2, "0")}`;
 }
-
-export { styles };

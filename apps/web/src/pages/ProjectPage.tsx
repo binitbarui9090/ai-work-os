@@ -13,7 +13,6 @@ import {
   errorMessage,
   formatDate,
   pluralise,
-  relativeTime,
   useAsync,
   useMutation,
 } from "../lib/hooks.js";
@@ -22,14 +21,11 @@ import { useWorkspace } from "../lib/session.js";
 import { PageHeader, SectionHeader } from "../components/PageHeader.js";
 import { KanbanBoard, TaskList } from "../components/TaskViews.js";
 import {
-  Avatar,
   AvatarGroup,
   EmptyState,
   ErrorState,
   Icon,
   LoadingRows,
-  Modal,
-  Notice,
   ProgressBar,
   SegmentedControl,
   useToast,
@@ -436,5 +432,3 @@ function CalendarView({ tasks }: { tasks: Task[] }) {
     </div>
   );
 }
-
-export { Avatar, Modal, Notice, relativeTime };

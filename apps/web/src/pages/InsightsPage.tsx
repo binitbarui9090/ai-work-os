@@ -23,7 +23,6 @@ import {
   LoadingRows,
   Notice,
   RiskBadge,
-  Spinner,
   Tabs,
   useToast,
 } from "../components/ui/index.js";
@@ -514,5 +513,3 @@ function DuplicatesSection({ projectId }: { projectId: string }) {
     </div>
   );
 }
-
-export { Spinner };

@@ -17,7 +17,6 @@ import { PageHeader } from "../components/PageHeader.js";
 import {
   Avatar,
   EmptyState,
-  ErrorState,
   Icon,
   Notice,
   Spinner,
@@ -419,5 +418,3 @@ function MessageView({ message, me }: { message: AiMessage; me: { id: string; na
     </article>
   );
 }
-
-export { ErrorState };

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { PROJECT_STATUSES, type ProjectStatus } from "@workos/shared";
 import { api } from "../lib/api.js";
-import { errorMessage, formatDate, pluralise, useAsync, useMutation } from "../lib/hooks.js";
+import { errorMessage, formatDate, useAsync, useMutation } from "../lib/hooks.js";
 import { useRealtimeEvent } from "../lib/realtime.js";
 import { useWorkspace } from "../lib/session.js";
 import { PageHeader } from "../components/PageHeader.js";
@@ -312,5 +312,3 @@ export function CreateProjectDialog({
     </Modal>
   );
 }
-
-export { pluralise };

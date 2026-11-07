@@ -15,7 +15,6 @@ import { useWorkspace } from "../lib/session.js";
 import { CommentThread } from "../components/CommentThread.js";
 import { PageHeader, SectionHeader } from "../components/PageHeader.js";
 import {
-  Avatar,
   ConfirmDialog,
   ErrorState,
   Icon,
@@ -516,5 +515,3 @@ function newBlock(): DocBlock {
     text: "",
   };
 }
-
-export { Avatar };

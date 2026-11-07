@@ -22,7 +22,6 @@ import {
   LoadingRows,
   Notice,
   ProgressBar,
-  RiskBadge,
   Spinner,
 } from "../components/ui/index.js";
 import styles from "./pages.module.css";
@@ -403,5 +402,3 @@ function greeting(name: string): string {
   if (hour < 18) return `Good afternoon, ${firstName}`;
   return `Good evening, ${firstName}`;
 }
-
-export { RiskBadge };

@@ -10,7 +10,7 @@ import type { MeetingActionItem, MeetingDetail, MeetingSummary } from "@workos/s
 import { execute, query, queryOne, transaction } from "../../db/pool.js";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../../lib/errors.js";
 import { asStringArray } from "../../lib/json.js";
-import { iso, isoRequired, toPublicUserPrefixed, userSelect } from "../../lib/rows.js";
+import { iso, isoRequired } from "../../lib/rows.js";
 import type { WorkspaceContext } from "../../middleware/context.js";
 import { loadSegments } from "../../ai/transcript.js";
 import { markForIndexing } from "../../ai/rag/indexer.js";
