@@ -6,13 +6,21 @@
  * model-written, and `generatedBy` records which path produced the report so
  * the UI can label it honestly.
  */
-import type { HealthReport, RiskLevel } from "@workos/shared";
+import { TASK_STATUSES, type HealthReport, type RiskLevel, type TaskStatus } from "@workos/shared";
 import { query, queryOne } from "../../db/pool.js";
 import { logger } from "../../lib/logger.js";
 import { asStringArray } from "../../lib/json.js";
 import { getLlm } from "../providers/index.js";
 import { detectBlockers } from "./blockers.js";
 import type { WorkspaceContext } from "../../middleware/context.js";
+
+/** One day of the reporting window. Days with no movement are present as zeros. */
+export interface ThroughputPoint {
+  /** `YYYY-MM-DD`. */
+  date: string;
+  created: number;
+  completed: number;
+}
 
 export interface HealthMetrics {
   tasksCreated: number;
@@ -25,6 +33,85 @@ export interface HealthMetrics {
   staleTaskCount: number;
   unassignedTaskCount: number;
   activeContributors: number;
+  /**
+   * Daily created/completed counts across the window, so the report can show
+   * whether the team is keeping up rather than only the period totals.
+   */
+  throughput: ThroughputPoint[];
+  /** Open-task counts by status at the end of the window. */
+  statusCounts: Record<TaskStatus, number>;
+}
+
+/**
+ * Daily created and completed counts.
+ *
+ * `generate_series` supplies the calendar so a quiet day is a zero rather than
+ * a gap — a line chart with missing days misstates the trend.
+ */
+export async function computeThroughput(
+  workspaceId: string,
+  projectId: string | null,
+  periodStart: Date,
+  periodEnd: Date,
+): Promise<ThroughputPoint[]> {
+  const params: unknown[] = [workspaceId, periodStart, periodEnd];
+  let scope = "";
+  if (projectId) {
+    params.push(projectId);
+    scope = `AND t.project_id = $${params.length}`;
+  }
+
+  return query<ThroughputPoint>(
+    `WITH days AS (
+       SELECT generate_series($2::date, $3::date, interval '1 day')::date AS day
+     )
+     SELECT to_char(d.day, 'YYYY-MM-DD') AS date,
+            coalesce(c.n, 0)::int AS created,
+            coalesce(f.n, 0)::int AS completed
+       FROM days d
+       LEFT JOIN (
+         SELECT t.created_at::date AS day, count(*) AS n
+           FROM tasks t
+          WHERE t.workspace_id = $1 AND t.created_at >= $2 AND t.created_at < $3 ${scope}
+          GROUP BY 1
+       ) c ON c.day = d.day
+       LEFT JOIN (
+         SELECT t.completed_at::date AS day, count(*) AS n
+           FROM tasks t
+          WHERE t.workspace_id = $1 AND t.completed_at >= $2 AND t.completed_at < $3 ${scope}
+          GROUP BY 1
+       ) f ON f.day = d.day
+      ORDER BY d.day`,
+    params,
+  );
+}
+
+/** Open-task counts by status, for the distribution bar. */
+export async function computeStatusCounts(
+  workspaceId: string,
+  projectId: string | null,
+): Promise<Record<TaskStatus, number>> {
+  const params: unknown[] = [workspaceId];
+  let scope = "";
+  if (projectId) {
+    params.push(projectId);
+    scope = `AND t.project_id = $${params.length}`;
+  }
+
+  const rows = await query<{ status: TaskStatus; n: number }>(
+    `SELECT t.status, count(*)::int AS n
+       FROM tasks t
+      WHERE t.workspace_id = $1 ${scope}
+      GROUP BY t.status`,
+    params,
+  );
+
+  const counts = Object.fromEntries(TASK_STATUSES.map((s) => [s, 0])) as Record<
+    TaskStatus,
+    number
+  >;
+  for (const row of rows) counts[row.status] = row.n;
+  return counts;
 }
 
 export async function computeMetrics(
@@ -90,6 +177,11 @@ export async function computeMetrics(
   const created = row?.created ?? 0;
   const completed = row?.completed ?? 0;
 
+  const [throughput, statusCounts] = await Promise.all([
+    computeThroughput(workspaceId, projectId, periodStart, periodEnd),
+    computeStatusCounts(workspaceId, projectId),
+  ]);
+
   return {
     tasksCreated: created,
     tasksCompleted: completed,
@@ -104,6 +196,8 @@ export async function computeMetrics(
     staleTaskCount: row?.stale ?? 0,
     unassignedTaskCount: row?.unassigned ?? 0,
     activeContributors: contributors?.count ?? 0,
+    throughput,
+    statusCounts,
   };
 }
 

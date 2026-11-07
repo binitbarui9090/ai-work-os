@@ -19,8 +19,8 @@
   --n-150: #e9ecf1;
   --n-200: #dfe3ea;
   --n-300: #c7cdd8;
-  --n-400: #9aa3b2;
-  --n-500: #717a8c;
+  --n-400: #8d95a4;
+  --n-500: #666e80;
   --n-600: #525a6b;
   --n-700: #3b4252;
   --n-800: #262b37;
@@ -43,9 +43,11 @@
   --green-100: #d6f5e3;
   --green-500: #12a150;
   --green-600: #0d7f3f;
+  --green-700: #037b3c; /* badge text: 4.6:1 on --green-100 */
   --amber-100: #fdf0d5;
   --amber-500: #c98a0a;
   --amber-600: #a06e06;
+  --amber-700: #926407; /* badge text: 4.6:1 on --amber-100 */
   --red-100: #fde3e3;
   --red-500: #dc3545;
   --red-600: #b92330;
@@ -80,6 +82,9 @@
   --border-subtle: var(--n-150);
   --border-strong: var(--n-300);
   --border-accent: var(--a-400);
+  /* Form controls only: their border is the sole affordance identifying
+   * them, so it carries 3:1. Decorative dividers keep --border. */
+  --border-input: #8f959f;
 
   /* ── Accent aliases ──────────────────────────────────────────────────── */
   --accent: var(--a-600);
@@ -91,9 +96,9 @@
   --focus-ring: var(--a-400);
 
   /* ── Status aliases ──────────────────────────────────────────────────── */
-  --success: var(--green-600);
+  --success: var(--green-700);
   --success-subtle: var(--green-100);
-  --warning: var(--amber-600);
+  --warning: var(--amber-700);
   --warning-subtle: var(--amber-100);
   --danger: var(--red-600);
   --danger-subtle: var(--red-100);
@@ -177,6 +182,41 @@
   --content-max: 1180px;
   --prose-max: 46rem;
 
+  /* ── Chart palette ───────────────────────────────────────────────────────
+   * Not hand-picked. Every value below was produced by the palette validator
+   * (OKLCH lightness band, chroma floor, protan/deuteran separation,
+   * normal-vision floor, contrast vs surface) and re-checked per theme.
+   * Changing one means re-running the validator for both modes.
+   *
+   * Two categorical slots for the throughput series. Worst adjacent pair
+   * ΔE 25.7 (protan) / 27.5 (normal); both ≥ 3:1 on the surface.
+   */
+  --chart-series-1: #1a7fd4; /* completed — matches --blue-500 */
+  --chart-series-2: #a06e06; /* created   — matches --amber-600 */
+
+  /* Ordinal ramp for the task-status progression: one hue, monotone
+   * lightness, light → dark as work advances. Validated with --ordinal
+   * (monotone L, adjacent ΔL ≥ 0.06, light end ≥ 2:1 on surface). */
+  --chart-stage-1: #a5a8fb; /* not started */
+  --chart-stage-2: #867ff5; /* in flight   */
+  --chart-stage-3: #5b46d6; /* done        */
+
+  /* Reserved status colour. Never used as "series 3", and always shipped
+   * with an icon and a label rather than colour alone. */
+  --chart-blocked: #c42a3a;
+
+  /* Chart chrome: recessive, one step off the surface, solid hairlines. */
+  --chart-surface: var(--surface);
+  --chart-grid: var(--n-150);
+  --chart-axis: var(--n-300);
+  --chart-ink: var(--text);
+  --chart-ink-muted: var(--text-tertiary);
+  /* The de-emphasis hue for the context series in an emphasis chart. */
+  --chart-muted: var(--n-300);
+  /* Label colour inside a filled mark, chosen by the fill's luminance. */
+  --chart-label-on-dark: #ffffff;
+  --chart-label-on-light: #14171e;
+
   /* ── Layers ──────────────────────────────────────────────────────────── */
   --z-sticky: 10;
   --z-dropdown: 40;
@@ -199,7 +239,7 @@
   --text: #edeff3;
   --text-secondary: #a8b0bf;
   --text-tertiary: #7d8696;
-  --text-disabled: #5b6373;
+  --text-disabled: #5c6474;
   --text-inverse: var(--n-900);
   --text-accent: var(--a-300);
 
@@ -207,6 +247,7 @@
   --border-subtle: #212733;
   --border-strong: #3a4254;
   --border-accent: var(--a-500);
+  --border-input: #5b6477;
 
   --accent: var(--a-500);
   --accent-hover: var(--a-400);
@@ -233,6 +274,24 @@
   --blue-500: #5aacf0;
   --violet-500: #a78bfa;
   --teal-500: #2dd4bf;
+
+  /* Chart palette, re-validated against the dark surface (#14171e) rather
+   * than flipped. The text/icon steps above are too light for chart fills —
+   * they sit outside the OKLCH lightness band — so the series slots get their
+   * own values here. The ordinal ramp inverts so "done" stays the most
+   * salient end against a dark surface. */
+  --chart-series-1: #2d8de3; /* completed — ΔE 24.8 protan vs series 2 */
+  --chart-series-2: #bd8310; /* created                                */
+
+  --chart-stage-1: #4c37b4; /* not started */
+  --chart-stage-2: #867ff5; /* in flight   */
+  --chart-stage-3: #c7cbff; /* done        */
+
+  --chart-blocked: #f2767f;
+
+  --chart-grid: #2c3140;
+  --chart-axis: #3a4254;
+  --chart-muted: #4b5466;
 
   /* Shadows carry less weight on dark backgrounds; borders do the work. */
   --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);

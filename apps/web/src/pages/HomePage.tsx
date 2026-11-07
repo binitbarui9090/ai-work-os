@@ -12,17 +12,20 @@ import { api } from "../lib/api.js";
 import { pluralise, relativeTime, useAsync, useMutation } from "../lib/hooks.js";
 import { useRealtimeEvent } from "../lib/realtime.js";
 import { useCurrentUser, useWorkspace } from "../lib/session.js";
-import { PageHeader, SectionHeader, Stat } from "../components/PageHeader.js";
+import { PageHeader, SectionHeader } from "../components/PageHeader.js";
+import { SegmentedBar, taskStatusSegments } from "../components/charts/SegmentedBar.js";
+import { StatTile, StatGrid } from "../components/charts/StatTile.js";
 import { TaskList } from "../components/TaskViews.js";
 import {
   Avatar,
   EmptyState,
   ErrorState,
   Icon,
-  LoadingRows,
   Notice,
   ProgressBar,
   Spinner,
+  StatGridSkeleton,
+  TaskListSkeleton,
 } from "../components/ui/index.js";
 import styles from "./pages.module.css";
 
@@ -47,7 +50,10 @@ export function HomePage() {
     return (
       <>
         <PageHeader title={greeting(user.name)} />
-        <LoadingRows rows={6} />
+        <StatGridSkeleton />
+        <div style={{ marginTop: "var(--space-6)" }}>
+          <TaskListSkeleton rows={5} />
+        </div>
       </>
     );
   }
@@ -65,6 +71,16 @@ export function HomePage() {
   const totalOpen = data.projects.reduce((sum, project) => sum + project.openTaskCount, 0);
   const totalOverdue = data.projects.reduce((sum, project) => sum + project.overdueTaskCount, 0);
   const totalBlocked = data.projects.reduce((sum, project) => sum + project.blockedTaskCount, 0);
+  const totalDone = data.projects.reduce((sum, project) => sum + project.completedTaskCount, 0);
+
+  // Each project already carries its counts by status; summing them avoids a
+  // second round-trip for the distribution bar.
+  const workspaceStatusCounts = data.projects.reduce<Record<string, number>>((acc, project) => {
+    for (const [status, count] of Object.entries(project.taskCounts)) {
+      acc[status] = (acc[status] ?? 0) + count;
+    }
+    return acc;
+  }, {});
 
   return (
     <div className="fade-in">
@@ -101,33 +117,51 @@ export function HomePage() {
         </div>
       )}
 
-      <div className={styles.statGrid}>
-        <Stat
-          label="Assigned to you"
-          value={data.myTasks.length}
-          icon="user"
-          meta={
-            data.myTasks.filter((t) => t.isBlocked).length > 0
-              ? `${data.myTasks.filter((t) => t.isBlocked).length} blocked`
-              : "Nothing blocked"
-          }
-          to="/my-tasks"
-        />
-        <Stat
-          label="Overdue"
-          value={totalOverdue}
-          icon="clock"
-          alert={totalOverdue > 0}
-          meta={totalOverdue > 0 ? "Needs re-dating or re-scoping" : "On schedule"}
-        />
-        <Stat
-          label="Blocked"
-          value={totalBlocked}
-          icon="blocked"
-          alert={totalBlocked > 0}
-          meta={totalBlocked > 0 ? "Waiting on upstream work" : "Nothing waiting"}
-        />
-        <Stat label="Open tasks" value={totalOpen} icon="list" meta="Across all projects" />
+      <div className="stack gap-4" style={{ marginBottom: "var(--space-6)" }}>
+        <StatGrid>
+          <StatTile
+            label="Assigned to you"
+            value={data.myTasks.length}
+            icon="user"
+            meta={
+              data.myTasks.filter((t) => t.isBlocked).length > 0
+                ? `${data.myTasks.filter((t) => t.isBlocked).length} blocked`
+                : "Nothing blocked"
+            }
+            to="/my-tasks"
+          />
+          <StatTile
+            label="Overdue"
+            value={totalOverdue}
+            icon="clock"
+            alert={totalOverdue > 0}
+            meta={totalOverdue > 0 ? "Needs re-dating or re-scoping" : "On schedule"}
+          />
+          <StatTile
+            label="Blocked"
+            value={totalBlocked}
+            icon="blocked"
+            alert={totalBlocked > 0}
+            meta={totalBlocked > 0 ? "Waiting on upstream work" : "Nothing waiting"}
+          />
+          <StatTile
+            label="Open tasks"
+            value={totalOpen}
+            icon="list"
+            meta="Across all projects"
+          />
+        </StatGrid>
+
+        {/* Workspace-wide stage distribution, summed across every project the
+            caller can see. */}
+        {totalOpen + totalDone > 0 && (
+          <div className="card card-padded">
+            <SegmentedBar
+              caption="All tasks by stage"
+              segments={taskStatusSegments(workspaceStatusCounts)}
+            />
+          </div>
+        )}
       </div>
 
       <div className={styles.twoColumn}>

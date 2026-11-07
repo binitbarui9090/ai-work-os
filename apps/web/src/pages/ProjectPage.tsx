@@ -19,15 +19,19 @@ import {
 import { useChannel, useRealtimeEvent } from "../lib/realtime.js";
 import { useWorkspace } from "../lib/session.js";
 import { PageHeader, SectionHeader } from "../components/PageHeader.js";
+import { SegmentedBar, taskStatusSegments } from "../components/charts/SegmentedBar.js";
+import { StatTile, StatGrid } from "../components/charts/StatTile.js";
 import { KanbanBoard, TaskList } from "../components/TaskViews.js";
 import {
   AvatarGroup,
+  BoardSkeleton,
   EmptyState,
   ErrorState,
   Icon,
-  LoadingRows,
   ProgressBar,
   SegmentedControl,
+  StatGridSkeleton,
+  TaskListSkeleton,
   useToast,
 } from "../components/ui/index.js";
 import { CreateTaskDialog } from "./TaskDialog.js";
@@ -113,6 +117,19 @@ export function ProjectPage() {
     return result;
   });
 
+  /** Title-only create, for the board's inline composer. */
+  const quickAdd = async (status: TaskStatus, title: string) => {
+    try {
+      const result = await api.tasks.create({ projectId, title, status });
+      setTasks((prev) =>
+        prev.some((t) => t.id === result.task.id) ? prev : [...prev, result.task],
+      );
+    } catch (err) {
+      toast.error("Could not add that task", errorMessage(err));
+      throw err;
+    }
+  };
+
   const filtered = useMemo(() => {
     let result = tasks;
     if (assigneeFilter === "unassigned") result = result.filter((t) => !t.assignee);
@@ -121,11 +138,14 @@ export function ProjectPage() {
     return result;
   }, [tasks, assigneeFilter, showDone]);
 
-  if (project.loading && !project.data) {
+  if (project.loading) {
     return (
       <>
         <PageHeader title="Loading project" />
-        <LoadingRows rows={5} />
+        <StatGridSkeleton />
+        <div style={{ marginTop: "var(--space-6)" }}>
+          <BoardSkeleton />
+        </div>
       </>
     );
   }
@@ -168,46 +188,44 @@ export function ProjectPage() {
         }
       />
 
-      <div className={styles.statGrid}>
-        <div className={styles.stat}>
-          <div className={styles.statLabel}>Progress</div>
-          <div className={styles.statValue}>{detail.progressPercent}%</div>
-          <div style={{ marginTop: "var(--space-3)" }}>
-            <ProgressBar percent={detail.progressPercent} color={detail.color} />
-          </div>
-          <div className={styles.statMeta}>
-            {detail.completedTaskCount} of {detail.completedTaskCount + detail.openTaskCount} done
-          </div>
-        </div>
-        <div className={`${styles.stat} ${detail.overdueTaskCount > 0 ? styles.statAlert : ""}`}>
-          <div className={styles.statLabel}>
-            <Icon name="clock" size={13} />
-            Overdue
-          </div>
-          <div className={styles.statValue}>{detail.overdueTaskCount}</div>
-          <div className={styles.statMeta}>
-            {detail.targetDate ? `Target ${formatDate(detail.targetDate)}` : "No target date set"}
-          </div>
-        </div>
-        <div className={`${styles.stat} ${detail.blockedTaskCount > 0 ? styles.statAlert : ""}`}>
-          <div className={styles.statLabel}>
-            <Icon name="blocked" size={13} />
-            Blocked
-          </div>
-          <div className={styles.statValue}>{detail.blockedTaskCount}</div>
-          <div className={styles.statMeta}>Waiting on upstream tasks</div>
-        </div>
-        <div className={styles.stat}>
-          <div className={styles.statLabel}>
-            <Icon name="flag" size={13} />
-            Milestones
-          </div>
-          <div className={styles.statValue}>
-            {milestones.filter((m) => m.completedAt).length}/{milestones.length}
-          </div>
-          <div className={styles.statMeta}>
-            {detail.lead ? `Led by ${detail.lead.name}` : "No lead assigned"}
-          </div>
+      <div style={{ marginBottom: "var(--space-6)" }} className="stack gap-4">
+        <StatGrid>
+          <StatTile
+            label="Progress"
+            value={`${detail.progressPercent}%`}
+            meta={`${detail.completedTaskCount} of ${detail.completedTaskCount + detail.openTaskCount} done`}
+          />
+          <StatTile
+            label="Overdue"
+            value={detail.overdueTaskCount}
+            icon="clock"
+            alert={detail.overdueTaskCount > 0}
+            meta={
+              detail.targetDate ? `Target ${formatDate(detail.targetDate)}` : "No target date set"
+            }
+          />
+          <StatTile
+            label="Blocked"
+            value={detail.blockedTaskCount}
+            icon="blocked"
+            alert={detail.blockedTaskCount > 0}
+            meta="Waiting on upstream tasks"
+          />
+          <StatTile
+            label="Milestones"
+            value={`${milestones.filter((m) => m.completedAt).length}/${milestones.length}`}
+            icon="flag"
+            meta={detail.lead ? `Led by ${detail.lead.name}` : "No lead assigned"}
+          />
+        </StatGrid>
+
+        {/* The breakdown behind the progress number: what is left, what is
+            moving, what is finished, and what is stuck. */}
+        <div className="card card-padded">
+          <SegmentedBar
+            caption={`${detail.name} tasks by stage`}
+            segments={taskStatusSegments(detail.taskCounts)}
+          />
         </div>
       </div>
 
@@ -259,8 +277,12 @@ export function ProjectPage() {
         <span className="text-xs text-tertiary">{pluralise(filtered.length, "task")}</span>
       </div>
 
-      {taskData.loading && tasks.length === 0 ? (
-        <LoadingRows rows={5} />
+      {taskData.loading ? (
+        view === "board" ? (
+          <BoardSkeleton />
+        ) : (
+          <TaskListSkeleton rows={8} />
+        )
       ) : taskData.error ? (
         <ErrorState error={taskData.error} onRetry={taskData.reload} />
       ) : filtered.length === 0 ? (
@@ -292,11 +314,14 @@ export function ProjectPage() {
             }
           />
         </div>
-      ) : view === "board" ? (
+      ) : (
+        <div className={taskData.refreshing ? styles.refreshing : undefined}>
+        {view === "board" ? (
         <KanbanBoard
           tasks={filtered}
           onMove={(task, status, neighbours) => void move.run(task, status, neighbours)}
           onAddTask={canEdit ? (status) => setCreateStatus(status) : undefined}
+          onQuickAdd={canEdit ? quickAdd : undefined}
         />
       ) : view === "list" ? (
         <TaskList
@@ -306,6 +331,8 @@ export function ProjectPage() {
         />
       ) : (
         <CalendarView tasks={filtered} />
+      )}
+        </div>
       )}
 
       <CreateTaskDialog

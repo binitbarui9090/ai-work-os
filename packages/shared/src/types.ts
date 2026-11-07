@@ -397,6 +397,31 @@ export interface Blocker {
   aiExplanation: string | null;
 }
 
+/** One day of a reporting window. Quiet days are present as zeros, not gaps. */
+export interface ThroughputPoint {
+  /** `YYYY-MM-DD`. */
+  date: string;
+  created: number;
+  completed: number;
+}
+
+export interface HealthMetrics {
+  tasksCreated: number;
+  tasksCompleted: number;
+  tasksOverdue: number;
+  tasksBlocked: number;
+  netProgress: number;
+  completionRate: number;
+  avgCycleTimeHours: number | null;
+  staleTaskCount: number;
+  unassignedTaskCount: number;
+  activeContributors: number;
+  /** Daily created/completed counts across the window. */
+  throughput: ThroughputPoint[];
+  /** Task counts by status at the end of the window. */
+  statusCounts: Record<TaskStatus, number>;
+}
+
 export interface HealthReport {
   id: string;
   workspaceId: string;
@@ -406,18 +431,7 @@ export interface HealthReport {
   periodEnd: string;
   riskLevel: RiskLevel;
   /** Deterministic metrics computed from the database. */
-  metrics: {
-    tasksCreated: number;
-    tasksCompleted: number;
-    tasksOverdue: number;
-    tasksBlocked: number;
-    netProgress: number;
-    completionRate: number;
-    avgCycleTimeHours: number | null;
-    staleTaskCount: number;
-    unassignedTaskCount: number;
-    activeContributors: number;
-  };
+  metrics: HealthMetrics;
   /** Model-written narrative. Null when no LLM is configured. */
   narrative: string | null;
   highlights: string[];

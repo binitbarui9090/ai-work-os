@@ -19,6 +19,7 @@ build boots and serves.
 | `npm run dev` | API :4000 and web :5173, Vite proxying `/api` and `/ws` |
 | `npm run seed -- --reset` | Recreates the demo workspace |
 | WebSocket end-to-end | 12 tests: handshake, auth refusal, fan-out, tenant isolation |
+| `npm run audit:contrast` | No failures: every text-on-surface pair in both themes |
 
 ---
 
@@ -102,6 +103,14 @@ The questions this was meant to answer, each with how it was checked.
 - [x] OAuth tokens encrypted with AES-256-GCM; single-use state rows
 - [x] Email via SMTP, with a `console` provider that says it did not send
 
+### Data visualisation
+- [x] Validated chart palette: computed against CVD, lightness, chroma and contrast checks in both themes
+- [x] Task-stage distribution as a thin segmented bar (ordinal ramp + reserved status colour for blocked)
+- [x] Throughput chart: created vs completed per day, two series on one axis
+- [x] Stat tiles with deltas and sparklines, proportional figures
+- [x] Every chart has a table view, a legend, and an accessible name
+- [x] Contrast audit over the design tokens, gating the build
+
 ### Platform
 - [x] 33 tables, 9 forward-only checksummed migrations
 - [x] 7 BullMQ queues plus repeatable maintenance; in-process fallback without Redis
@@ -111,6 +120,8 @@ The questions this was meant to answer, each with how it was checked.
 - [x] `/api/health` reporting every dependency
 - [x] Centralised error handling with request-id correlation
 - [x] Seed data exercising every feature, including deliberately broken states
+- [x] Content-shaped loading skeletons; refetch dims the previous render rather than flashing
+- [x] Board drag-and-drop with a real insertion indicator, plus inline task capture
 
 ---
 

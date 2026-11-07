@@ -23,6 +23,14 @@ import styles from "./ui.module.css";
 
 export { Icon };
 export type { IconName };
+export {
+  BoardSkeleton,
+  CardGridSkeleton,
+  ChartSkeleton,
+  ProseSkeleton,
+  StatGridSkeleton,
+  TaskListSkeleton,
+} from "./Skeletons.js";
 
 // ── Avatar ──────────────────────────────────────────────────────────────────
 

@@ -15,6 +15,9 @@ import { api } from "../lib/api.js";
 import { errorMessage, formatDate, pluralise, relativeTime, useAsync, useMutation } from "../lib/hooks.js";
 import { useWorkspace } from "../lib/session.js";
 import { PageHeader, SectionHeader } from "../components/PageHeader.js";
+import { SegmentedBar, taskStatusSegments } from "../components/charts/SegmentedBar.js";
+import { StatTile, StatGrid } from "../components/charts/StatTile.js";
+import { ThroughputChart } from "../components/charts/ThroughputChart.js";
 import {
   Avatar,
   EmptyState,
@@ -335,20 +338,29 @@ function HealthReportCard({ report }: { report: HealthReport }) {
       </div>
 
       <div className="panel-body stack gap-5">
-        <div className={styles.statGrid} style={{ marginBottom: 0 }}>
-          <Metric label="Completed" value={metrics.tasksCompleted} />
-          <Metric label="Created" value={metrics.tasksCreated} />
-          <Metric
-            label="Net progress"
-            value={metrics.netProgress > 0 ? `+${metrics.netProgress}` : metrics.netProgress}
-            alert={metrics.netProgress < 0}
+        <StatGrid>
+          <StatTile
+            label="Completed"
+            value={metrics.tasksCompleted}
+            icon="check"
+            trend={metrics.throughput?.map((p) => p.completed)}
+            meta="in this period"
           />
-          <Metric label="Overdue" value={metrics.tasksOverdue} alert={metrics.tasksOverdue > 0} />
-          <Metric label="Blocked" value={metrics.tasksBlocked} alert={metrics.tasksBlocked > 0} />
-          <Metric label="Stalled" value={metrics.staleTaskCount} alert={metrics.staleTaskCount > 0} />
-          <Metric label="Unowned" value={metrics.unassignedTaskCount} />
-          <Metric label="Active people" value={metrics.activeContributors} />
-          <Metric
+          <StatTile
+            label="Created"
+            value={metrics.tasksCreated}
+            icon="plus"
+            trend={metrics.throughput?.map((p) => p.created)}
+            meta="in this period"
+          />
+          <StatTile
+            label="Net progress"
+            value={metrics.netProgress > 0 ? `+${metrics.netProgress}` : String(metrics.netProgress)}
+            icon="activity"
+            alert={metrics.netProgress < 0}
+            meta={metrics.netProgress < 0 ? "scope is growing" : "closing faster than opening"}
+          />
+          <StatTile
             label="Avg cycle time"
             value={
               metrics.avgCycleTimeHours === null
@@ -357,8 +369,45 @@ function HealthReportCard({ report }: { report: HealthReport }) {
                   ? `${metrics.avgCycleTimeHours}h`
                   : `${(metrics.avgCycleTimeHours / 24).toFixed(1)}d`
             }
+            icon="clock"
+            meta={metrics.avgCycleTimeHours === null ? "no completions to measure" : "creation to done"}
           />
-        </div>
+          <StatTile
+            label="Overdue"
+            value={metrics.tasksOverdue}
+            icon="alert"
+            alert={metrics.tasksOverdue > 0}
+          />
+          <StatTile
+            label="Blocked"
+            value={metrics.tasksBlocked}
+            icon="blocked"
+            alert={metrics.tasksBlocked > 0}
+          />
+          <StatTile
+            label="Stalled"
+            value={metrics.staleTaskCount}
+            icon="clock"
+            alert={metrics.staleTaskCount > 0}
+            meta="over a week without movement"
+          />
+          <StatTile label="Unowned" value={metrics.unassignedTaskCount} icon="user" />
+          <StatTile label="Active people" value={metrics.activeContributors} icon="users" />
+        </StatGrid>
+
+        {metrics.throughput && metrics.throughput.length > 1 && (
+          <ThroughputChart points={metrics.throughput} />
+        )}
+
+        {metrics.statusCounts && (
+          <div>
+            <SectionHeader title="Where the work sits" />
+            <SegmentedBar
+              caption="Tasks by stage"
+              segments={taskStatusSegments(metrics.statusCounts)}
+            />
+          </div>
+        )}
 
         {report.narrative && (
           <div>
@@ -430,25 +479,6 @@ function HealthReportCard({ report }: { report: HealthReport }) {
         <div className="text-xs text-tertiary">Generated {relativeTime(report.createdAt)}</div>
       </div>
     </article>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  alert,
-}: {
-  label: string;
-  value: string | number;
-  alert?: boolean;
-}) {
-  return (
-    <div className={`${styles.stat} ${alert ? styles.statAlert : ""}`}>
-      <div className={styles.statLabel}>{label}</div>
-      <div className={styles.statValue} style={{ fontSize: "1.375rem" }}>
-        {value}
-      </div>
-    </div>
   );
 }
 

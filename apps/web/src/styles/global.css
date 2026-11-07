@@ -33,9 +33,21 @@ body {
   font-weight: var(--weight-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Inter's tabular figures keep numeric columns from shifting. */
-  font-variant-numeric: tabular-nums;
   text-rendering: optimizeLegibility;
+}
+
+/**
+ * Tabular figures only where numbers align vertically.
+ *
+ * Applied globally they make a large standalone value look loose — every digit
+ * gets the width of a zero, so `121` sits oddly in a stat tile. Columns and
+ * axis ticks genuinely need the alignment; display numbers want the font's
+ * proportional figures.
+ */
+table,
+.tabular,
+.mono {
+  font-variant-numeric: tabular-nums;
 }
 
 img,
@@ -329,7 +341,8 @@ hr {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   background: var(--surface);
-  border: 1px solid var(--border);
+  /* 3:1 against the surface: the border is what identifies the control. */
+  border: 1px solid var(--border-input);
   border-radius: var(--radius-md);
   color: var(--text);
   font-size: var(--text-sm);
@@ -353,7 +366,7 @@ hr {
   cursor: pointer;
   /* Native arrow is replaced with one that follows the theme. */
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5l3-3' stroke='%23717a8c' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5l3-3' stroke='%23666e80' stroke-width='1.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right var(--space-3) center;
   padding-right: var(--space-8);

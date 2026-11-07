@@ -9,9 +9,9 @@ import {
   EmptyState,
   ErrorState,
   Icon,
-  LoadingRows,
   Modal,
   Notice,
+  TaskListSkeleton,
   useToast,
 } from "../components/ui/index.js";
 import styles from "./pages.module.css";
@@ -82,8 +82,8 @@ export function DocumentsPage() {
         </select>
       </div>
 
-      {documents.loading && items.length === 0 ? (
-        <LoadingRows rows={4} />
+      {documents.loading ? (
+        <TaskListSkeleton rows={6} />
       ) : documents.error ? (
         <ErrorState error={documents.error} onRetry={documents.reload} />
       ) : items.length === 0 ? (

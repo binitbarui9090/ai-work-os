@@ -358,7 +358,10 @@
   display: flex;
   flex-direction: column;
   flex: 0 0 272px;
-  max-height: calc(100vh - 220px);
+  /* Clamped rather than computed from a fixed chrome height: what sits above
+     the board varies by page, so a `calc(100vh - 220px)` was either
+     overflowing the viewport or leaving the columns stunted. */
+  max-height: min(68vh, 740px);
   background: var(--surface-sunken);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -408,6 +411,93 @@
 
 .columnFooter {
   padding: var(--space-2);
+}
+
+/* The insertion line: where the dragged card will land. 2px, accent, with
+   a leading dot so it reads as a caret rather than a divider. */
+.dropIndicator {
+  position: relative;
+  height: 2px;
+  margin: var(--space-1) 0;
+  background: var(--accent);
+  border-radius: 1px;
+  animation: dropIn var(--duration-fast) var(--ease-out);
+}
+
+.dropIndicator::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
+@keyframes dropIn {
+  from {
+    opacity: 0;
+    transform: scaleX(0.9);
+  }
+}
+
+/* ── Inline capture ─────────────────────────────────────────────────────── */
+
+.quickAddTrigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-tertiary);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.quickAddTrigger:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.quickAdd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-focus);
+}
+
+.quickAddInput {
+  width: 100%;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--text);
+  resize: none;
+}
+
+.quickAddInput:focus {
+  outline: none;
+}
+
+.quickAddInput::placeholder {
+  color: var(--text-disabled);
+}
+
+.quickAddRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .taskCard {
@@ -834,6 +924,16 @@
   font-size: var(--text-xs);
   line-height: var(--leading-snug);
   color: var(--text);
+}
+
+/* ── Refetch ────────────────────────────────────────────────────────────── */
+
+/* Holding the previous render at reduced opacity, rather than swapping in a
+   skeleton, keeps the layout still while new data arrives. */
+.refreshing {
+  opacity: 0.6;
+  transition: opacity var(--duration-normal) var(--ease-out);
+  pointer-events: none;
 }
 
 /* ── Responsive ─────────────────────────────────────────────────────────── */

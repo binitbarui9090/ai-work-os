@@ -16,8 +16,8 @@ import {
   Avatar,
   EmptyState,
   ErrorState,
-  LoadingRows,
   SegmentedControl,
+  TaskListSkeleton,
 } from "../components/ui/index.js";
 import styles from "./pages.module.css";
 
@@ -101,8 +101,8 @@ export function ActivityPage() {
         </select>
       </div>
 
-      {loaded.loading && events.length === 0 ? (
-        <LoadingRows rows={8} />
+      {loaded.loading ? (
+        <TaskListSkeleton rows={10} />
       ) : loaded.error ? (
         <ErrorState error={loaded.error} onRetry={loaded.reload} />
       ) : visible.length === 0 ? (

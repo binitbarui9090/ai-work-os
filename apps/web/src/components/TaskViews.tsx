@@ -6,7 +6,7 @@
  * task page), and the server computes the final rank from the neighbouring
  * card ids, so two people dragging at once converge instead of fighting.
  */
-import { useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import { Link } from "react-router-dom";
 import { TASK_STATUSES, type Task, type TaskStatus } from "@workos/shared";
 import { daysUntil, formatDate, statusLabel } from "../lib/hooks.js";
@@ -258,10 +258,24 @@ export function TaskCard({
   );
 }
 
+/**
+ * Kanban board.
+ *
+ * Drag-and-drop shows a real insertion line rather than only tinting the
+ * target column, so you can see where a card will land before you let go.
+ * The drop index is computed from the pointer against each card's midpoint,
+ * and the server derives the final rank from the neighbouring card ids — two
+ * people dragging at once therefore converge instead of fighting.
+ *
+ * Dragging is not the only way to move a card: every card's status select on
+ * its detail page does the same thing, and each column accepts a typed title
+ * for quick capture.
+ */
 export function KanbanBoard({
   tasks,
   onMove,
   onAddTask,
+  onQuickAdd,
   columns = BOARD_COLUMNS,
 }: {
   tasks: Task[];
@@ -271,65 +285,97 @@ export function KanbanBoard({
     status: TaskStatus,
     neighbours: { beforeTaskId: string | null; afterTaskId: string | null },
   ) => void;
+  /** Opens the full task dialog for this column. */
   onAddTask?: (status: TaskStatus) => void;
+  /** Creates a task from just a title. Enables the inline composer. */
+  onQuickAdd?: (status: TaskStatus, title: string) => Promise<unknown>;
   columns?: TaskStatus[];
 }) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
+  /** Where the card would land: a column plus an index within it. */
+  const [dropAt, setDropAt] = useState<{ status: TaskStatus; index: number } | null>(null);
 
   const byStatus = new Map<TaskStatus, Task[]>();
   for (const status of columns) byStatus.set(status, []);
-  for (const task of tasks) {
-    byStatus.get(task.status)?.push(task);
-  }
+  for (const task of tasks) byStatus.get(task.status)?.push(task);
   for (const list of byStatus.values()) list.sort((a, b) => a.position - b.position);
 
-  const handleDrop = (status: TaskStatus, dropIndex: number) => {
-    setDragOverColumn(null);
-    const task = tasks.find((t) => t.id === draggingId);
+  /** The column as it will look mid-drag, with the dragged card removed. */
+  const columnWithout = (status: TaskStatus) =>
+    (byStatus.get(status) ?? []).filter((task) => task.id !== draggingId);
+
+  const endDrag = () => {
     setDraggingId(null);
-    if (!task) return;
+    setDropAt(null);
+  };
 
-    const column = (byStatus.get(status) ?? []).filter((t) => t.id !== task.id);
-    const before = dropIndex > 0 ? column[dropIndex - 1] : undefined;
-    const after = column[dropIndex];
+  const commit = () => {
+    const task = tasks.find((candidate) => candidate.id === draggingId);
+    const target = dropAt;
+    endDrag();
+    if (!task || !target) return;
 
-    // No-op drops are not sent: dragging a card back where it was should not
-    // produce an activity entry.
-    if (task.status === status && before?.id === undefined && after?.id === column[0]?.id) {
-      const currentIndex = (byStatus.get(status) ?? []).findIndex((t) => t.id === task.id);
-      if (currentIndex === dropIndex) return;
-    }
+    const column = columnWithout(target.status);
+    const before = target.index > 0 ? column[target.index - 1] : undefined;
+    const after = column[target.index];
 
-    onMove(task, status, {
+    // A drop back into the same slot is not sent: it would write an activity
+    // entry for a move that did not happen.
+    const currentIndex = (byStatus.get(task.status) ?? []).findIndex((c) => c.id === task.id);
+    if (task.status === target.status && currentIndex === target.index) return;
+
+    onMove(task, target.status, {
       beforeTaskId: before?.id ?? null,
       afterTaskId: after?.id ?? null,
     });
+  };
+
+  /**
+   * Which gap the pointer is nearest, from the card midpoints. Measuring the
+   * rendered geometry rather than tracking per-card enter/leave events means
+   * the indicator does not flicker between adjacent cards.
+   */
+  const indexFromPointer = (container: HTMLElement, clientY: number): number => {
+    const cards = [...container.querySelectorAll<HTMLElement>("[data-card]")].filter(
+      (card) => card.dataset.card !== draggingId,
+    );
+    for (let i = 0; i < cards.length; i++) {
+      const box = cards[i]!.getBoundingClientRect();
+      if (clientY < box.top + box.height / 2) return i;
+    }
+    return cards.length;
   };
 
   return (
     <div className={styles.board}>
       {columns.map((status) => {
         const column = byStatus.get(status) ?? [];
+        const visible = columnWithout(status);
+        const isTarget = dropAt?.status === status;
+
         return (
           <section
             key={status}
-            className={`${styles.column} ${dragOverColumn === status ? styles.columnDragOver : ""}`}
+            className={`${styles.column} ${isTarget ? styles.columnDragOver : ""}`}
+            aria-label={`${statusLabel(status)} column`}
             onDragOver={(event) => {
+              if (!draggingId) return;
               event.preventDefault();
-              setDragOverColumn(status);
+              event.dataTransfer.dropEffect = "move";
+              const body = event.currentTarget.querySelector<HTMLElement>("[data-column-body]");
+              if (!body) return;
+              setDropAt({ status, index: indexFromPointer(body, event.clientY) });
             }}
             onDragLeave={(event) => {
-              // Only clear when leaving the column, not a child card.
+              // Only clear when the pointer leaves the column, not a child card.
               if (!event.currentTarget.contains(event.relatedTarget as Node)) {
-                setDragOverColumn((current) => (current === status ? null : current));
+                setDropAt((current) => (current?.status === status ? null : current));
               }
             }}
             onDrop={(event) => {
               event.preventDefault();
-              handleDrop(status, column.filter((t) => t.id !== draggingId).length);
+              commit();
             }}
-            aria-label={`${statusLabel(status)} column`}
           >
             <header className={styles.columnHeader}>
               <span className={styles.columnTitle}>{statusLabel(status)}</span>
@@ -340,50 +386,145 @@ export function KanbanBoard({
                   type="button"
                   className="btn btn-ghost btn-icon btn-sm"
                   onClick={() => onAddTask(status)}
-                  aria-label={`Add a task to ${statusLabel(status)}`}
+                  aria-label={`Add a task to ${statusLabel(status)} with full details`}
+                  title="New task with full details"
                 >
                   <Icon name="plus" size={13} />
                 </button>
               )}
             </header>
 
-            <div className={styles.columnBody}>
-              {column.length === 0 ? (
-                <div className={styles.columnEmpty}>
-                  {dragOverColumn === status ? "Drop here" : "Nothing here"}
-                </div>
-              ) : (
-                column.map((task, index) => (
-                  <div
-                    key={task.id}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      handleDrop(status, index);
-                    }}
-                  >
-                    <TaskCard
-                      task={task}
-                      dragging={draggingId === task.id}
-                      onDragStart={(event) => {
-                        setDraggingId(task.id);
-                        event.dataTransfer.effectAllowed = "move";
-                        // Some browsers refuse the drag without any payload.
-                        event.dataTransfer.setData("text/plain", task.id);
-                      }}
-                      onDragEnd={() => {
-                        setDraggingId(null);
-                        setDragOverColumn(null);
-                      }}
-                    />
-                  </div>
-                ))
+            <div className={styles.columnBody} data-column-body>
+              {visible.length === 0 && !isTarget && (
+                <div className={styles.columnEmpty}>Nothing here</div>
               )}
+
+              {/* The insertion line sits in the gap the card would occupy. */}
+              {isTarget && dropAt.index === 0 && <DropIndicator />}
+
+              {visible.map((task, index) => (
+                <div key={task.id} data-card={task.id}>
+                  <TaskCard
+                    task={task}
+                    dragging={draggingId === task.id}
+                    onDragStart={(event) => {
+                      setDraggingId(task.id);
+                      event.dataTransfer.effectAllowed = "move";
+                      // Some browsers refuse the drag without a payload.
+                      event.dataTransfer.setData("text/plain", task.id);
+                    }}
+                    onDragEnd={endDrag}
+                  />
+                  {isTarget && dropAt.index === index + 1 && <DropIndicator />}
+                </div>
+              ))}
             </div>
+
+            {onQuickAdd && (
+              <div className={styles.columnFooter}>
+                <QuickAdd status={status} onAdd={onQuickAdd} />
+              </div>
+            )}
           </section>
         );
       })}
+    </div>
+  );
+}
+
+function DropIndicator() {
+  return <div className={styles.dropIndicator} aria-hidden />;
+}
+
+/**
+ * Inline capture: a title and Enter.
+ *
+ * The full dialog has nine fields, which is the wrong weight for "add the
+ * thing I just thought of". Everything else can be filled in later.
+ */
+function QuickAdd({
+  status,
+  onAdd,
+}: {
+  status: TaskStatus;
+  onAdd: (status: TaskStatus, title: string) => Promise<unknown>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [saving, setSaving] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (open) inputRef.current?.focus();
+  }, [open]);
+
+  const submit = async () => {
+    const trimmed = title.trim();
+    if (!trimmed || saving) return;
+    setSaving(true);
+    try {
+      await onAdd(status, trimmed);
+      // Stay open for a run of quick entries.
+      setTitle("");
+      inputRef.current?.focus();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        className={styles.quickAddTrigger}
+        onClick={() => setOpen(true)}
+      >
+        <Icon name="plus" size={13} />
+        Add a task
+      </button>
+    );
+  }
+
+  return (
+    <div className={styles.quickAdd}>
+      <textarea
+        ref={inputRef}
+        className={styles.quickAddInput}
+        rows={2}
+        placeholder="What needs doing?"
+        value={title}
+        disabled={saving}
+        onChange={(event) => setTitle(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            void submit();
+          }
+          if (event.key === "Escape") {
+            setTitle("");
+            setOpen(false);
+          }
+        }}
+        onBlur={() => {
+          if (!title.trim()) setOpen(false);
+        }}
+        aria-label={`New task in ${statusLabel(status)}`}
+      />
+      <div className={styles.quickAddRow}>
+        <span className="text-xs text-tertiary">
+          <kbd>↵</kbd> to add · <kbd>esc</kbd> to close
+        </span>
+        <span className="spacer" />
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          onClick={() => void submit()}
+          disabled={saving || title.trim().length === 0}
+        >
+          {saving && <span className="spinner" />}
+          Add
+        </button>
+      </div>
     </div>
   );
 }

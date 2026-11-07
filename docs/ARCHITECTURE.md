@@ -499,3 +499,64 @@ it is the difference between a product that is honest and one that is not.
   would be the next addition.
 - **Rate limits are per-instance when Redis is down**, so the effective limit
   multiplies by the instance count during a Redis outage.
+
+---
+
+## 12. Data visualisation
+
+Charts follow a fixed procedure rather than taste, because the colour part is
+computable and guessing it produces charts that mislead.
+
+**The palette is computed, not picked.** Every `--chart-*` token in
+`tokens.css` was produced by a validator checking OKLCH lightness band, chroma
+floor, protanopia/deuteranopia separation (Machado-Oliveira-Fernandes at
+severity 1.0), a normal-vision floor, and contrast against the surface — then
+re-checked against the dark surface rather than flipped. The dark-mode series
+colours differ from the dark-mode *text* colours for a reason: the text steps
+are too light for chart fills and fall outside the lightness band.
+
+Recorded results, so a future change can be compared against them:
+
+| Palette | Worst adjacent pair | Contrast vs surface |
+| --- | --- | --- |
+| Throughput series, light | ΔE 25.7 protan / 27.5 normal | 4.17 / 4.44 |
+| Throughput series, dark | ΔE 24.8 protan / 27.6 normal | 5.15 / 5.48 |
+| Status ramp, light | monotone L, ΔL ≥ 0.06 | 2.19 / 3.30 / 6.38 |
+| Status ramp, dark | monotone L, ΔL ≥ 0.06 | 2.15 / 5.44 / 11.46 |
+
+**Form follows the data's job.**
+
+- *Task status distribution* is an ordered progression, so it takes a one-hue
+  **ordinal ramp** — the reader sees the order in the colour — rendered as a
+  thin segmented bar beside the figures that carry the numbers. Seven statuses
+  collapse to the four groups people actually ask about (not started, in
+  flight, done, blocked). `blocked` is a genuine status, so it uses the
+  reserved status colour and always ships with an icon and a label, never
+  colour alone.
+- *Throughput* is two series of the same unit over time, so it is a two-series
+  line chart on **one** axis. Never a second y-scale: the alignment of two
+  scales is arbitrary and invents a correlation that is not in the data.
+- *Single headline numbers* are **stat tiles**, not one-bar bar charts.
+
+**Every chart ships its accessible twin.** A legend is always present for two
+or more series; identity is never colour alone. Each chart has a table view
+reachable from its header, hover state is mirrored by the accessible name, and
+no value is gated behind a tooltip.
+
+**Mark specs**, applied uniformly: 2px lines, ≥8px markers with a 2px ring in
+the surface colour, area fills at 10% opacity, hairline *solid* gridlines
+(dashes read as a threshold), a 2px surface gap between touching fills rather
+than a border, and selective direct labels — the endpoint only, never a number
+on every point.
+
+### Contrast is audited, not assumed
+
+`apps/web/scripts/audit-contrast.mjs` parses the token file and checks every
+text-on-surface pair the UI uses, in both themes, reporting the WCAG 2 ratio
+and APCA Lc. `npm run build` runs it and fails on a regression.
+
+It found real problems on its first run: tertiary text at 4.32:1, two badge
+text colours under 4.5:1, and form controls whose border was effectively
+invisible at 1.6:1. Form controls now use a dedicated `--border-input` token
+at 3:1, because a control's boundary is the only thing identifying it
+(WCAG 1.4.11) — while a card divider is decorative and carries no requirement.

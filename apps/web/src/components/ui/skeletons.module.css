@@ -1,0 +1,165 @@
+/**
+ * Skeleton geometry.
+ *
+ * Each block mirrors the real component's padding and gaps, so the shimmer
+ * sits exactly where the content will. Any divergence here shows up as a
+ * layout jump on load.
+ */
+
+.circle {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  display: block;
+}
+
+.circleSmall {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  display: block;
+}
+
+.swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  display: block;
+}
+
+/* ── Task list ──────────────────────────────────────────────────────────── */
+
+/* Matches `.taskRow` in pages.module.css. */
+.taskRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  height: 45px;
+}
+
+.taskRow:last-child {
+  border-bottom: none;
+}
+
+/* ── Board ──────────────────────────────────────────────────────────────── */
+
+.board {
+  display: flex;
+  gap: var(--space-3);
+  overflow: hidden;
+  padding-bottom: var(--space-4);
+  align-items: flex-start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 0 0 272px;
+  padding: var(--space-3) var(--space-2) var(--space-2);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.columnHeader {
+  padding: 0 var(--space-1) var(--space-1);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+/* ── Stat tiles ─────────────────────────────────────────────────────────── */
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.statTile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* ── Project cards ──────────────────────────────────────────────────────── */
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: var(--space-4);
+}
+
+.projectCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.projectTop {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+/* ── Prose ──────────────────────────────────────────────────────────────── */
+
+.prose {
+  max-width: var(--prose-max);
+  padding: var(--space-2) 0;
+}
+
+/* ── Chart ──────────────────────────────────────────────────────────────── */
+
+.chartCard {
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.plot {
+  margin: var(--space-4) 0 var(--space-3);
+}
+
+/* Sized to the real plot band, including the x-axis labels, so the card does
+   not resize when the chart arrives. */
+.plotArea {
+  display: block;
+  width: 100%;
+  height: 168px;
+  border-radius: var(--radius-md);
+}
+
+.legendRow {
+  display: flex;
+  gap: var(--space-4);
+}

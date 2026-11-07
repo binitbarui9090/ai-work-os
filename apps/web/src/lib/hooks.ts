@@ -7,7 +7,14 @@ import { ApiRequestError } from "./api.js";
 
 export interface AsyncState<T> {
   data: T | null;
+  /** True only while there is nothing to show yet — the skeleton case. */
   loading: boolean;
+  /**
+   * True while re-fetching over data that is already on screen. Render the
+   * previous result at reduced opacity rather than flashing a skeleton: a
+   * skeleton on refetch throws the layout away and reads as a page reload.
+   */
+  refreshing: boolean;
   error: ApiRequestError | Error | null;
   /** Re-runs the loader. */
   reload: () => void;
@@ -26,30 +33,34 @@ export function useAsync<T>(
   deps: readonly unknown[],
 ): AsyncState<T> {
   const [data, setDataState] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState(true);
   const [error, setError] = useState<ApiRequestError | Error | null>(null);
   const [nonce, setNonce] = useState(0);
   const loaderRef = useRef(loader);
   loaderRef.current = loader;
+  // Read synchronously so the first paint after a reload does not flicker
+  // between "has data" and "loading".
+  const hasData = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
-    setLoading(true);
+    setPending(true);
     setError(null);
 
     loaderRef
       .current(controller.signal)
       .then((result) => {
         if (!active) return;
+        hasData.current = true;
         setDataState(result);
-        setLoading(false);
+        setPending(false);
       })
       .catch((err: unknown) => {
         if (!active) return;
         if (err instanceof DOMException && err.name === "AbortError") return;
         setError(err instanceof Error ? err : new Error(String(err)));
-        setLoading(false);
+        setPending(false);
       });
 
     return () => {
@@ -67,7 +78,10 @@ export function useAsync<T>(
 
   return {
     data,
-    loading,
+    // Only the very first load shows a skeleton; later fetches dim what is
+    // already there.
+    loading: pending && data === null,
+    refreshing: pending && data !== null,
     error,
     reload: useCallback(() => setNonce((n) => n + 1), []),
     setData,

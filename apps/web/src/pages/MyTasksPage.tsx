@@ -11,8 +11,8 @@ import {
   EmptyState,
   ErrorState,
   Icon,
-  LoadingRows,
   SegmentedControl,
+  TaskListSkeleton,
 } from "../components/ui/index.js";
 import styles from "./pages.module.css";
 
@@ -145,8 +145,8 @@ export function MyTasksPage() {
         <span className="text-xs text-tertiary">{pluralise(tasks.length, "task")}</span>
       </div>
 
-      {loaded.loading && tasks.length === 0 ? (
-        <LoadingRows rows={6} />
+      {loaded.loading ? (
+        <TaskListSkeleton rows={8} />
       ) : loaded.error ? (
         <ErrorState error={loaded.error} onRetry={loaded.reload} />
       ) : tasks.length === 0 ? (

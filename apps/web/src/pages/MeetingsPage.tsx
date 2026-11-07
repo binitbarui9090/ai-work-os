@@ -9,9 +9,9 @@ import {
   EmptyState,
   ErrorState,
   Icon,
-  LoadingRows,
   Modal,
   Notice,
+  TaskListSkeleton,
   useToast,
 } from "../components/ui/index.js";
 import styles from "./pages.module.css";
@@ -55,8 +55,8 @@ export function MeetingsPage() {
         }
       />
 
-      {meetings.loading && items.length === 0 ? (
-        <LoadingRows rows={3} />
+      {meetings.loading ? (
+        <TaskListSkeleton rows={5} />
       ) : meetings.error ? (
         <ErrorState error={meetings.error} onRetry={meetings.reload} />
       ) : items.length === 0 ? (

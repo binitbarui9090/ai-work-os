@@ -25,7 +25,8 @@
     "infra:down": "docker compose down",
     "infra:reset": "docker compose down -v && docker compose up -d",
     "setup": "npm install && npm run build -w @workos/shared && npm run infra:up && node scripts/wait-for-infra.mjs && npm run migrate && npm run seed",
-    "dev:shared": "npm run dev -w @workos/shared"
+    "dev:shared": "npm run dev -w @workos/shared",
+    "audit:contrast": "npm run audit:contrast -w @workos/web"
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5",

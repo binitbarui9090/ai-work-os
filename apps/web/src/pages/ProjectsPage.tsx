@@ -8,10 +8,10 @@ import { useWorkspace } from "../lib/session.js";
 import { PageHeader } from "../components/PageHeader.js";
 import {
   Avatar,
+  CardGridSkeleton,
   EmptyState,
   ErrorState,
   Icon,
-  LoadingRows,
   Modal,
   Notice,
   ProgressBar,
@@ -80,8 +80,8 @@ export function ProjectsPage() {
         />
       </div>
 
-      {projects.loading && !projects.data ? (
-        <LoadingRows rows={4} />
+      {projects.loading ? (
+        <CardGridSkeleton cards={6} />
       ) : projects.error ? (
         <ErrorState error={projects.error} onRetry={projects.reload} />
       ) : visible.length === 0 ? (
