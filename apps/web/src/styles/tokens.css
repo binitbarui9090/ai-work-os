@@ -1,0 +1,244 @@
+/**
+ * Design tokens.
+ *
+ * One scale for everything: colour, type, space, radius, shadow, motion.
+ * Components reference tokens only — no component defines its own hex value,
+ * which is what keeps the product looking like one product in both themes.
+ *
+ * Colour is built from a neutral ramp plus one accent. Semantic aliases
+ * (`--surface`, `--text`, `--border`) are what components actually use, so
+ * dark mode is a redefinition of aliases rather than a parallel stylesheet.
+ */
+
+:root {
+  /* ── Neutral ramp ─────────────────────────────────────────────────────── */
+  --n-0: #ffffff;
+  --n-25: #fcfcfd;
+  --n-50: #f8f9fb;
+  --n-100: #f1f3f6;
+  --n-150: #e9ecf1;
+  --n-200: #dfe3ea;
+  --n-300: #c7cdd8;
+  --n-400: #9aa3b2;
+  --n-500: #717a8c;
+  --n-600: #525a6b;
+  --n-700: #3b4252;
+  --n-800: #262b37;
+  --n-850: #1c2029;
+  --n-900: #14171e;
+  --n-950: #0d0f14;
+
+  /* ── Accent: indigo ──────────────────────────────────────────────────── */
+  --a-50: #eef0ff;
+  --a-100: #e0e3ff;
+  --a-200: #c7cbff;
+  --a-300: #a5a8fb;
+  --a-400: #867ff5;
+  --a-500: #6d5fe8;
+  --a-600: #5b46d6;
+  --a-700: #4c37b4;
+  --a-800: #3f2f91;
+
+  /* ── Status hues ─────────────────────────────────────────────────────── */
+  --green-100: #d6f5e3;
+  --green-500: #12a150;
+  --green-600: #0d7f3f;
+  --amber-100: #fdf0d5;
+  --amber-500: #c98a0a;
+  --amber-600: #a06e06;
+  --red-100: #fde3e3;
+  --red-500: #dc3545;
+  --red-600: #b92330;
+  --blue-100: #d9ecfd;
+  --blue-500: #1a7fd4;
+  --blue-600: #1366ad;
+  --violet-100: #ece0fd;
+  --violet-500: #8b5cf6;
+  --teal-100: #d3f3ef;
+  --teal-500: #0d9488;
+
+  /* ── Semantic surfaces ───────────────────────────────────────────────── */
+  --bg: var(--n-50);
+  --surface: var(--n-0);
+  --surface-raised: var(--n-0);
+  --surface-sunken: var(--n-100);
+  --surface-hover: var(--n-100);
+  --surface-active: var(--n-150);
+  --surface-inverse: var(--n-900);
+  --overlay: rgb(20 23 30 / 0.4);
+
+  /* ── Semantic text ───────────────────────────────────────────────────── */
+  --text: var(--n-900);
+  --text-secondary: var(--n-600);
+  --text-tertiary: var(--n-500);
+  --text-disabled: var(--n-400);
+  --text-inverse: var(--n-0);
+  --text-accent: var(--a-600);
+
+  /* ── Semantic borders ────────────────────────────────────────────────── */
+  --border: var(--n-200);
+  --border-subtle: var(--n-150);
+  --border-strong: var(--n-300);
+  --border-accent: var(--a-400);
+
+  /* ── Accent aliases ──────────────────────────────────────────────────── */
+  --accent: var(--a-600);
+  --accent-hover: var(--a-700);
+  --accent-active: var(--a-800);
+  --accent-subtle: var(--a-50);
+  --accent-subtle-hover: var(--a-100);
+  --accent-text: var(--n-0);
+  --focus-ring: var(--a-400);
+
+  /* ── Status aliases ──────────────────────────────────────────────────── */
+  --success: var(--green-600);
+  --success-subtle: var(--green-100);
+  --warning: var(--amber-600);
+  --warning-subtle: var(--amber-100);
+  --danger: var(--red-600);
+  --danger-subtle: var(--red-100);
+  --info: var(--blue-600);
+  --info-subtle: var(--blue-100);
+
+  /* ── Typography ──────────────────────────────────────────────────────── */
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* A restrained scale — six sizes is enough for an application UI. */
+  --text-xs: 0.75rem;     /* 12px — metadata, badges */
+  --text-sm: 0.8125rem;   /* 13px — the UI default */
+  --text-base: 0.875rem;  /* 14px — body copy */
+  --text-md: 1rem;        /* 16px — card titles */
+  --text-lg: 1.25rem;     /* 20px — page titles */
+  --text-xl: 1.625rem;    /* 26px — hero headings */
+  --text-2xl: 2.125rem;   /* 34px — marketing */
+
+  --leading-tight: 1.25;
+  --leading-snug: 1.4;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.7;
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Optical tightening: large text needs negative tracking to look right. */
+  --tracking-tight: -0.018em;
+  --tracking-snug: -0.009em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+
+  /* ── Spacing: 4px base ───────────────────────────────────────────────── */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+
+  /* ── Radii ───────────────────────────────────────────────────────────── */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 20px;
+  --radius-full: 999px;
+
+  /* ── Elevation ───────────────────────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgb(20 23 30 / 0.05);
+  --shadow-sm: 0 1px 3px rgb(20 23 30 / 0.07), 0 1px 2px rgb(20 23 30 / 0.04);
+  --shadow-md: 0 4px 12px rgb(20 23 30 / 0.08), 0 1px 3px rgb(20 23 30 / 0.05);
+  --shadow-lg: 0 12px 28px rgb(20 23 30 / 0.12), 0 2px 6px rgb(20 23 30 / 0.06);
+  --shadow-xl: 0 24px 56px rgb(20 23 30 / 0.16), 0 4px 12px rgb(20 23 30 / 0.08);
+  --shadow-focus: 0 0 0 3px rgb(109 95 232 / 0.22);
+
+  /* ── Motion ──────────────────────────────────────────────────────────── */
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.45, 0.05, 0.55, 0.95);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --duration-instant: 70ms;
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
+  --duration-slow: 280ms;
+
+  /* ── Layout ──────────────────────────────────────────────────────────── */
+  --sidebar-width: 244px;
+  --topbar-height: 52px;
+  --content-max: 1180px;
+  --prose-max: 46rem;
+
+  /* ── Layers ──────────────────────────────────────────────────────────── */
+  --z-sticky: 10;
+  --z-dropdown: 40;
+  --z-overlay: 60;
+  --z-modal: 70;
+  --z-toast: 90;
+}
+
+/* Dark theme: aliases are redefined; the ramps stay put. */
+:root[data-theme="dark"] {
+  --bg: var(--n-950);
+  --surface: var(--n-900);
+  --surface-raised: var(--n-850);
+  --surface-sunken: var(--n-950);
+  --surface-hover: var(--n-850);
+  --surface-active: var(--n-800);
+  --surface-inverse: var(--n-50);
+  --overlay: rgb(0 0 0 / 0.6);
+
+  --text: #edeff3;
+  --text-secondary: #a8b0bf;
+  --text-tertiary: #7d8696;
+  --text-disabled: #5b6373;
+  --text-inverse: var(--n-900);
+  --text-accent: var(--a-300);
+
+  --border: #2a3040;
+  --border-subtle: #212733;
+  --border-strong: #3a4254;
+  --border-accent: var(--a-500);
+
+  --accent: var(--a-500);
+  --accent-hover: var(--a-400);
+  --accent-active: var(--a-300);
+  --accent-subtle: #221d42;
+  --accent-subtle-hover: #2b2452;
+  --accent-text: #ffffff;
+  --focus-ring: var(--a-400);
+
+  /* Status colours are lightened for contrast on dark surfaces, and their
+     "subtle" fills become low-opacity tints rather than pale pastels. */
+  --success: #3ecf7c;
+  --success-subtle: #10301f;
+  --warning: #e8b341;
+  --warning-subtle: #332508;
+  --danger: #f2767f;
+  --danger-subtle: #3a1619;
+  --info: #5aacf0;
+  --info-subtle: #0e2639;
+
+  --green-500: #3ecf7c;
+  --amber-500: #e8b341;
+  --red-500: #f2767f;
+  --blue-500: #5aacf0;
+  --violet-500: #a78bfa;
+  --teal-500: #2dd4bf;
+
+  /* Shadows carry less weight on dark backgrounds; borders do the work. */
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 12px 28px rgb(0 0 0 / 0.55);
+  --shadow-xl: 0 24px 56px rgb(0 0 0 / 0.6);
+  --shadow-focus: 0 0 0 3px rgb(134 127 245 / 0.3);
+}
