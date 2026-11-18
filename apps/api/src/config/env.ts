@@ -58,6 +58,10 @@ const schema = z.object({
   SESSION_SECRET: z.string().min(16).default("dev-only-session-secret-change-me-0123456789abcdef"),
   SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   COOKIE_SECURE: bool(false),
+  // "none" is required when the web app and API are on different origins
+  // (e.g. web on Vercel, API on Railway) — the browser then needs "secure"
+  // too, which is checked below rather than left to fail silently in prod.
+  COOKIE_SAME_SITE: z.enum(["lax", "none", "strict"]).default("lax"),
 
   DATABASE_URL: z.string().min(1).default("postgres://workos:workos@localhost:55432/workos"),
   TEST_DATABASE_URL: z
@@ -143,6 +147,24 @@ export const env = {
 } as const;
 
 export type Env = typeof env;
+
+// A browser refuses `SameSite=None` without `Secure`, so a misconfigured
+// split deployment would otherwise fail silently — the login request would
+// succeed but the cookie would simply never be set, with nothing in the
+// response to explain why. Fail loudly at boot instead.
+if (env.COOKIE_SAME_SITE === "none" && !env.COOKIE_SECURE) {
+  const message =
+    "COOKIE_SAME_SITE=none requires COOKIE_SECURE=true (browsers reject " +
+    "SameSite=None cookies that are not Secure). Set COOKIE_SECURE=true, " +
+    "which also means the API must be served over HTTPS.";
+  if (env.isProduction) {
+    // eslint-disable-next-line no-console
+    console.error(message);
+    process.exit(1);
+  }
+  // eslint-disable-next-line no-console
+  console.warn(message);
+}
 
 /** Runtime feature flags derived from configuration. Surfaced to the client. */
 export const features = {

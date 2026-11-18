@@ -39,7 +39,22 @@ import type {
   WorkspaceSummary,
 } from "@workos/shared";
 
-const BASE = "/api";
+/**
+ * Base URL for the API.
+ *
+ * Relative by default: the dev server proxies `/api` to the API process, and
+ * a self-hosted deployment typically puts nginx (or similar) in front of both
+ * on one origin — in that shape the relative path just works, and cookies are
+ * same-origin for free.
+ *
+ * A split deployment (web app on Vercel, API on its own host) has no shared
+ * origin to be relative *to*, so `VITE_API_BASE_URL` points at the API's full
+ * origin instead. Set it at build time; Vite inlines it into the bundle.
+ */
+const BASE = `${(import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "")}/api`;
+
+/** True when talking to a different origin — same check the fetch call below needs. */
+const isCrossOrigin = Boolean(import.meta.env.VITE_API_BASE_URL);
 
 export class ApiRequestError extends Error {
   constructor(
@@ -124,8 +139,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     response = await fetch(buildUrl(path, options.query), {
       method: options.method ?? "GET",
       headers,
-      // Session cookie is httpOnly and first-party.
-      credentials: "same-origin",
+      // "include" sends the session cookie even when the API is a different
+      // origin (a split deployment) — the server only honours it there if
+      // COOKIE_SAME_SITE=none and COOKIE_SECURE=true are set to match. For a
+      // same-origin deployment this is equivalent to "same-origin".
+      credentials: isCrossOrigin ? "include" : "same-origin",
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: options.signal,
     });

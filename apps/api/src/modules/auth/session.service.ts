@@ -20,9 +20,16 @@ function cookieOptions(): CookieOptions {
   return {
     httpOnly: true,
     secure: env.COOKIE_SECURE,
-    // `lax` still sends the cookie on top-level navigations (invite links)
-    // while blocking cross-site POSTs, which is the CSRF property we want.
-    sameSite: "lax",
+    // `lax` (the default) still sends the cookie on top-level navigations
+    // (invite links) while blocking cross-site POSTs — the CSRF property we
+    // want for the common case where the web app and API share an origin.
+    //
+    // A split deployment (the web app on Vercel, the API elsewhere) is
+    // cross-origin for every request, and `lax` never sends the cookie on a
+    // cross-site fetch, so sign-in would silently not persist. For that case
+    // set COOKIE_SAME_SITE=none — browsers then require `secure: true` as
+    // well, which `env.ts` enforces at startup.
+    sameSite: env.COOKIE_SAME_SITE,
     path: "/",
     maxAge: ttlMs(),
   };

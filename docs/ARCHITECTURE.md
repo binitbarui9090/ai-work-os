@@ -24,7 +24,7 @@ constraint no longer applies.
                     └──┬────────┬────────┬─────────┘
                        │        │        │
               ┌────────▼──┐ ┌───▼────┐ ┌─▼──────────┐
-              │ Postgres  │ │ Redis  │ │ S3/MinIO   │
+              │ Postgres  │ │ Redis  │ │ S3/S3Mock  │
               │ +pgvector │ │ pubsub │ │ attachments│
               │ +pg_trgm  │ │ +BullMQ│ └────────────┘
               └───────────┘ └───┬────┘

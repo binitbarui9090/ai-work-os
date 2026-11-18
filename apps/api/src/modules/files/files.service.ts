@@ -45,28 +45,106 @@ const ALLOWED_EXACT = new Set([
 ]);
 
 let client: S3Client | null = null;
+let presignClient: S3Client | null = null;
 
-function s3(): S3Client {
-  if (!features.storage) {
+interface S3Config {
+  enabled: boolean;
+  region: string;
+  endpoint: string;
+  publicUrl: string;
+  bucket: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  forcePathStyle: boolean;
+}
+
+/**
+ * Test seam, mirroring `setLlmForTesting` in `ai/providers/index.ts`: the
+ * global test setup forces `STORAGE_PROVIDER=disabled` for the whole suite
+ * (most tests have nothing to do with storage and shouldn't need it
+ * configured), which freezes `features.storage` to `false` for every test
+ * file. Tests that *do* need real storage — a real presigned-upload round
+ * trip — inject config here instead, independent of that frozen env.
+ */
+let configOverride: S3Config | null = null;
+
+export function setS3ConfigForTesting(config: S3Config | null): void {
+  configOverride = config;
+  client = null;
+  presignClient = null;
+}
+
+function resolveConfig(): S3Config {
+  if (configOverride) return configOverride;
+  return {
+    enabled: features.storage,
+    region: env.S3_REGION,
+    endpoint: env.S3_ENDPOINT,
+    publicUrl: env.S3_PUBLIC_URL,
+    bucket: env.S3_BUCKET,
+    accessKeyId: env.S3_ACCESS_KEY_ID,
+    secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+    forcePathStyle: env.S3_FORCE_PATH_STYLE,
+  };
+}
+
+function requireStorageConfigured(): S3Config {
+  const config = resolveConfig();
+  if (!config.enabled) {
     throw new NotConfiguredError(
       "File storage is not configured. Set STORAGE_PROVIDER=s3 with S3_* credentials " +
-        "(docker compose provides a local MinIO), then restart the API.",
+        "(docker compose provides local S3-compatible storage), then restart the API.",
     );
   }
+  return config;
+}
+
+/** For server-to-server calls (HeadObject, DeleteObject) — the internal endpoint. */
+function s3(): S3Client {
+  const config = requireStorageConfigured();
   client ??= new S3Client({
-    region: env.S3_REGION,
-    endpoint: env.S3_ENDPOINT || undefined,
-    forcePathStyle: env.S3_FORCE_PATH_STYLE,
+    region: config.region,
+    endpoint: config.endpoint || undefined,
+    forcePathStyle: config.forcePathStyle,
     credentials: {
-      accessKeyId: env.S3_ACCESS_KEY_ID,
-      secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
     },
   });
   return client;
 }
 
+/**
+ * For presigned URLs the *browser* will call directly (PutObject, GetObject).
+ *
+ * Signing uses whatever endpoint the client is configured with, and that
+ * endpoint ends up baked into the returned URL. In a split setup — the API
+ * reaching storage over a Docker-internal or VPC-internal hostname that the
+ * browser cannot resolve — signing with the internal endpoint would hand the
+ * browser a URL it can never reach. `S3_PUBLIC_URL` is the address the
+ * browser can actually use; it still points at the same bucket, so the
+ * signature is valid either way. Falls back to the internal endpoint when
+ * unset, which is correct whenever the API and the browser can both reach
+ * storage the same way (AWS S3 itself, or a server exposed on one public
+ * host with nothing internal-only about it).
+ */
+function s3Presign(): S3Client {
+  const config = requireStorageConfigured();
+  if (!config.publicUrl) return s3();
+  presignClient ??= new S3Client({
+    region: config.region,
+    endpoint: config.publicUrl,
+    forcePathStyle: config.forcePathStyle,
+    credentials: {
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+    },
+  });
+  return presignClient;
+}
+
 export function storageConfigured(): boolean {
-  return features.storage;
+  return resolveConfig().enabled;
 }
 
 function assertContentType(contentType: string): void {
@@ -135,10 +213,11 @@ export async function createUploadTicket(
   );
   if (!row) throw new Error("attachment insert returned no row");
 
+  const bucket = resolveConfig().bucket;
   const uploadUrl = await getSignedUrl(
-    s3(),
+    s3Presign(),
     new PutObjectCommand({
-      Bucket: env.S3_BUCKET,
+      Bucket: bucket,
       Key: storageKey,
       ContentType: input.contentType,
       ContentLength: input.sizeBytes,
@@ -180,7 +259,7 @@ export async function confirmUpload(
   let actualSize = row.size_bytes;
   try {
     const head = await s3().send(
-      new HeadObjectCommand({ Bucket: env.S3_BUCKET, Key: row.storage_key }),
+      new HeadObjectCommand({ Bucket: resolveConfig().bucket, Key: row.storage_key }),
     );
     actualSize = Number(head.ContentLength ?? row.size_bytes);
   } catch (err) {
@@ -266,9 +345,9 @@ export async function createDownloadUrl(
   if (!row) throw new NotFoundError("Attachment");
 
   return getSignedUrl(
-    s3(),
+    s3Presign(),
     new GetObjectCommand({
-      Bucket: env.S3_BUCKET,
+      Bucket: resolveConfig().bucket,
       Key: row.storage_key,
       ResponseContentDisposition: `attachment; filename="${row.filename.replace(/"/g, "")}"`,
       ResponseContentType: row.content_type,
@@ -295,7 +374,9 @@ export async function deleteAttachment(
   // shows the user a file that cannot be downloaded.
   await execute(`DELETE FROM attachments WHERE id = $1`, [attachmentId]);
   try {
-    await s3().send(new DeleteObjectCommand({ Bucket: env.S3_BUCKET, Key: row.storage_key }));
+    await s3().send(
+      new DeleteObjectCommand({ Bucket: resolveConfig().bucket, Key: row.storage_key }),
+    );
   } catch (err) {
     logger.warn(
       { err: (err as Error).message, storageKey: row.storage_key },

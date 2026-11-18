@@ -24,6 +24,11 @@
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
     "infra:reset": "docker compose down -v && docker compose up -d",
+    "docker:up": "docker compose --profile app up -d --build",
+    "docker:down": "docker compose --profile app down",
+    "docker:reset": "docker compose --profile app down -v && docker compose --profile app up -d --build",
+    "docker:logs": "docker compose --profile app logs -f",
+    "docker:seed": "docker compose exec api node apps/api/dist/scripts/seed.js",
     "setup": "npm install && npm run build -w @workos/shared && npm run infra:up && node scripts/wait-for-infra.mjs && npm run migrate && npm run seed",
     "dev:shared": "npm run dev -w @workos/shared",
     "audit:contrast": "npm run audit:contrast -w @workos/web"

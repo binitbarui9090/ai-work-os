@@ -63,8 +63,14 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     if (status !== "authenticated" || !workspace) return;
 
     closedByUs.current = false;
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const url = `${protocol}//${window.location.host}/ws?workspaceId=${encodeURIComponent(workspace.id)}`;
+    // Same split-deployment story as the REST client: relative to this origin
+    // by default, or `VITE_WS_BASE_URL` (e.g. wss://api.example.com) when the
+    // API lives elsewhere.
+    const wsBase = import.meta.env.VITE_WS_BASE_URL as string | undefined;
+    const origin =
+      wsBase?.replace(/\/$/, "") ??
+      `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}`;
+    const url = `${origin}/ws?workspaceId=${encodeURIComponent(workspace.id)}`;
 
     setState(attemptRef.current === 0 ? "connecting" : "reconnecting");
 

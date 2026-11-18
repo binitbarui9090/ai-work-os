@@ -175,35 +175,27 @@ With that layout, set `WEB_ORIGIN=https://app.example.com` and
 
 ## 4. Docker
 
-```dockerfile
-FROM node:22-slim AS build
-WORKDIR /app
-COPY package*.json ./
-COPY packages/shared/package.json packages/shared/
-COPY apps/api/package.json apps/api/
-COPY apps/web/package.json apps/web/
-RUN npm ci
-COPY . .
-RUN npm run build && cp -r apps/api/src/db/migrations apps/api/dist/db/migrations
+The real, tested Dockerfiles live in the repo: [apps/api/Dockerfile](../apps/api/Dockerfile)
+(also used for the worker — same image, `CMD ["node", "apps/api/dist/worker.js"]`)
+and [apps/web/Dockerfile](../apps/web/Dockerfile). Both copy the whole repo
+into the build stage before `npm ci`, because `packages/shared` has a
+`prepare` script that compiles it on install, and that needs its source
+present — copying only `package.json` files first breaks it. The runtime
+stage sets `NODE_ENV=production` **after** `npm ci`, not before: npm treats
+that env var as an implicit `--omit=dev` the moment it's present, and
+`prepare` needs `tsc` (a devDependency) to run.
 
-FROM node:22-slim AS api
-WORKDIR /app
-ENV NODE_ENV=production
-COPY package*.json ./
-COPY packages/shared/package.json packages/shared/
-COPY apps/api/package.json apps/api/
-RUN npm ci --omit=dev
-COPY --from=build /app/packages/shared/dist packages/shared/dist
-COPY --from=build /app/apps/api/dist apps/api/dist
-EXPOSE 4000
-CMD ["node", "apps/api/dist/index.js"]
-```
+Rather than hand-rolling these, `npm run docker:up` builds and runs the real
+images directly via `docker compose --profile app up -d --build` — this is
+the same one-command self-host path described in the
+[README](../README.md#self-host-the-whole-stack-with-one-command).
 
-The worker is the same image with `CMD ["node", "apps/api/dist/worker.js"]`.
-
-The included `docker-compose.yml` is for **local development** — it exposes
-Postgres on 55432, Redis on 56379 and MinIO on 59000 with default credentials.
-Do not point it at production.
+The included `docker-compose.yml`'s base services (Postgres, Redis,
+S3-compatible storage) are tuned for **local development** — non-default
+ports (55432, 56379, 59000) and no real credentials. For a real deployment,
+either run the `app` profile's `api`/`worker`/`web` services with production
+secrets injected via `.env`, or deploy the images to a host like
+Railway/Render (see below) and point them at managed Postgres/Redis instead.
 
 ---
 
@@ -213,12 +205,12 @@ For attachments, create a bucket and set:
 
 ```bash
 STORAGE_PROVIDER=s3
-S3_ENDPOINT=                     # leave blank for AWS; set for MinIO/R2/Spaces
+S3_ENDPOINT=                     # leave blank for AWS; set for MinIO/R2/Spaces/etc.
 S3_REGION=eu-west-1
 S3_BUCKET=workos-uploads
 S3_ACCESS_KEY_ID=...
 S3_SECRET_ACCESS_KEY=...
-S3_FORCE_PATH_STYLE=false        # true for MinIO
+S3_FORCE_PATH_STYLE=false        # true for MinIO or most self-hosted S3-compatible servers
 ```
 
 The browser uploads directly with a presigned PUT, so the bucket needs CORS for
