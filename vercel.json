@@ -1,0 +1,8 @@
+{
+  "buildCommand": "npm run build -w @workos/shared && npm run build -w @workos/web",
+  "outputDirectory": "apps/web/dist",
+  "installCommand": "npm ci",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

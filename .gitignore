@@ -12,3 +12,5 @@ apps/api/dist/
 packages/shared/dist/
 .pgdata/
 uploads/
+.vercel
+.env*

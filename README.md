@@ -8,6 +8,14 @@ session auth with role-based access control, real WebSocket collaboration,
 background workers, and an agent whose every mutation goes through a human
 approval gate recorded in an audit log.
 
+Open source under the [MIT license](LICENSE) — clone it, self-host it, change it.
+
+**Live demo (frontend only):** <https://ai-work-os-nine.vercel.app>
+This is the static web app with no backend behind it yet, so sign-in will show
+a "could not reach the server" error — it's there to look at the UI, not to
+use. For a fully working instance (sign-in, AI chat, realtime, everything),
+run it yourself: one command, no account needed, see below.
+
 ---
 
 ## What it does
@@ -60,24 +68,86 @@ Stated plainly, because the alternative is pretending:
 
 ## Running it
 
-You need **Node 20.10+** and **Docker**.
+Two ways to run the whole thing on your own machine. Pick one — you don't
+need both.
+
+### Option A — one command, just Docker
+
+The easiest path if you don't want Node installed at all: Docker builds and
+runs the API, the background worker, the web app, Postgres, Redis and
+S3-compatible storage together, as real containers, not a demo stub.
+
+You need **Docker** (Docker Desktop on Mac/Windows, Docker Engine on Linux).
 
 ```bash
-git clone <this repo> && cd "AI WORK OS"
+git clone https://github.com/binitbarui9090/ai-work-os.git
+cd ai-work-os
+npm run docker:up      # builds the images and starts everything (first run takes a few minutes)
+```
+
+Open <http://localhost:8090> and sign in as **`maya@northwind.test`** with
+password **`demo-password-1`** — the sign-in page has a button that fills
+this in. The demo data seeds itself automatically the first time the API
+starts.
+
+```bash
+npm run docker:logs    # follow logs from every service
+npm run docker:down    # stop everything
+npm run docker:reset   # wipe the database/volumes and start fresh
+```
+
+This doesn't require `npm install` on your machine at all — everything
+happens inside the containers. (The `npm run docker:*` commands are just
+thin wrappers around `docker compose`, so if you don't have Node/npm either,
+run the equivalent `docker compose --profile app up -d --build` directly.)
+
+### Option B — local dev, with hot reload
+
+Better if you're going to actually edit the code: both the API and the web
+app rebuild on save instead of needing a container rebuild.
+
+You need **Node 20.10+** and **Docker** (for Postgres/Redis/storage only).
+
+```bash
+git clone https://github.com/binitbarui9090/ai-work-os.git
+cd ai-work-os
 cp .env.example .env
 npm install
-npm run setup     # starts Postgres + Redis + MinIO, migrates, seeds demo data
+npm run setup     # starts Postgres + Redis + storage, migrates, seeds demo data
 npm run dev       # API on :4000, web on :5173
 ```
 
-Open <http://localhost:5173> and sign in as **`maya@northwind.test`** with
-password **`demo-password-1`**. The sign-in page has a button that fills this in.
+Open <http://localhost:5173> and sign in the same way as above.
+
+### Either way
 
 The seed creates a workspace with six members, three projects at different
 stages, a real dependency graph (including deliberately blocked and overdue
 work), documents, and a meeting with an unprocessed transcript. The guest
 account `pat@contractor.test` can only see one project — useful for checking
 that project-level permissions hold.
+
+### How to use it, once you're in
+
+- **Projects** (left sidebar) → pick one to see its **board**. Drag cards
+  between columns, or switch to the list/calendar view from the tabs at the
+  top.
+- **New task** from the board's `+` button. Add subtasks, a milestone, labels
+  and dependencies from the task's detail panel — try making two tasks depend
+  on each other, the UI will refuse the cycle.
+- **AI → Plan from a brief**, in the sidebar: paste a rough description of a
+  project and it proposes milestones/tasks/estimates. Nothing is written
+  until you review and approve it.
+- **AI → Chat**: ask about the workspace in plain language ("what's blocked
+  on the mobile launch?"). It cites what it read; any action it wants to take
+  shows up as a pending approval instead of happening immediately.
+- **Documents** and **Meetings** work the same way — meeting transcripts get
+  summarized and turned into suggested action items, which you convert to
+  real tasks yourself.
+- Everything updates live for everyone else in the workspace — open the app
+  in two browser windows signed in as different demo users to see it.
+- AI features need an API key (see below) — without one the UI tells you
+  which environment variable to set instead of silently doing nothing.
 
 ### Turning on AI
 
@@ -109,15 +179,18 @@ npm run reindex
 | --- | --- |
 | `npm run dev` | API and web, both watching |
 | `npm run dev:worker` | Background workers as a separate process |
-| `npm test` | 127 API tests against a real Postgres database |
+| `npm test` | 134 API tests against a real Postgres database |
 | `npm run typecheck` | TypeScript across all three packages |
 | `npm run build` | Production build |
 | `npm run migrate` | Apply pending migrations |
 | `npm run migrate:status` | Show migration state |
 | `npm run seed -- --reset` | Recreate the demo workspace |
 | `npm run reindex` | Rebuild the semantic index |
-| `npm run infra:up` / `infra:down` | Docker services |
-| `npm run infra:reset` | Wipe the volumes and start fresh |
+| `npm run infra:up` / `infra:down` | Postgres/Redis/storage only (for local dev) |
+| `npm run infra:reset` | Wipe those volumes and start fresh |
+| `npm run docker:up` / `docker:down` | The whole app, containerized (Option A above) |
+| `npm run docker:reset` | Wipe the containerized stack's volumes and rebuild |
+| `npm run docker:logs` | Follow logs from the containerized stack |
 
 ---
 
@@ -162,6 +235,46 @@ assert the properties that actually matter without spending tokens:
 Tenancy and realtime get the same treatment: cross-workspace reads return 404
 rather than 403, guest writes are refused, and a socket cannot receive another
 workspace's events or another user's notifications.
+
+---
+
+## Deploying it for real
+
+This app has a persistent WebSocket server and background workers, so it
+doesn't fit a pure serverless platform end-to-end. The practical split:
+
+**Frontend (`apps/web`) → Vercel.** This repo's [vercel.json](vercel.json)
+already builds and deploys it (`npm run build -w @workos/shared && npm run
+build -w @workos/web`, output `apps/web/dist`). If the frontend is on a
+different origin than the API, set these two build-time environment
+variables in the Vercel project settings before building:
+
+```bash
+VITE_API_BASE_URL=https://your-api.example.com
+VITE_WS_BASE_URL=wss://your-api.example.com
+```
+
+**Backend (`apps/api` + worker) → Railway, Render, Fly.io, or any Docker
+host.** Build [apps/api/Dockerfile](apps/api/Dockerfile) once, run it twice —
+once as the API (`CMD ["node", "apps/api/dist/index.js"]`, the Dockerfile's
+default) and once as the worker (override the command to `["node",
+"apps/api/dist/worker.js"]`). Both need `DATABASE_URL` and `REDIS_URL`
+pointing at real managed Postgres (with the `pgvector` and `pg_trgm`
+extensions available) and Redis. Set `WEB_ORIGIN`/`API_BASE_URL` to wherever
+the frontend actually lives, and if that's a different origin, also set
+`COOKIE_SAME_SITE=none` and `COOKIE_SECURE=true` — the API refuses to start
+in production with `SameSite=none` and an insecure cookie, since that
+combination silently breaks sign-in over plain HTTP.
+
+**Or skip the split entirely** and self-host the whole thing with
+`npm run docker:up` (see Option A above) on any VM or server that can run
+Docker — nginx fronts the web app and proxies `/api`/`/ws` to the API
+container, so it's one origin and none of the cross-origin cookie setup
+above is needed.
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the full walkthrough,
+including a sample nginx config for same-origin hosting and the storage/CORS
+setup for file uploads.
 
 ---
 
